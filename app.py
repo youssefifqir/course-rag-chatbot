@@ -62,30 +62,6 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 
-def seed_from_url() -> None:
-    """Support demo links: http://localhost:8501/?q=What+is+RAG
-    asks the question once on load - nice for sharing a one-shot demo link."""
-    params = st.query_params
-    q = params.get("q")
-    if q and not st.session_state.messages:
-        try:
-            from src.chat import ask_question
-
-            result = ask_question(q)
-            st.session_state.messages.append({"role": "user", "content": q})
-            st.session_state.messages.append(
-                {"role": "assistant", "content": result["answer"], "sources": result["sources"]}
-            )
-        except Exception as e:
-            st.session_state.messages.append(
-                {"role": "assistant", "content": f"Seed question failed: {e}"}
-            )
-        params.clear()
-
-
-seed_from_url()
-
-
 def render_sources(sources: list[dict]) -> None:
     """Render the sources that fed the last answer."""
     rows = []

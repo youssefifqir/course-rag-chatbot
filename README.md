@@ -45,7 +45,7 @@ python -m src.ingest
 streamlit run app.py
 ```
 
-Open a demo link directly: `http://localhost:8501/?q=What+is+retrieval-augmented+generation`
+Ready for questions in the chat box below.
 
 ## The corpus (all public, free to use for study)
 

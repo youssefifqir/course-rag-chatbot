@@ -8,9 +8,9 @@ Metric (retrieval, model-free and reproducible):
 Label: this is a *rebuild demo set* we wrote for this repo on public course
 notes. It is not a benchmark of the Clinical RAG project on the CV.
 
-Usage:  python -m eval.run_eval [--k 4] [--no-llm]
+Usage:  python -m eval.run_eval [--k 6] [--no-llm]
         --no-llm measures retrieval only (fast, no Ollama needed)
-Metrics are written to eval/eval_results.md.
+Metrics are written to eval/eval_results.md (per-domain breakdown included).
 """
 from __future__ import annotations
 
@@ -35,55 +35,63 @@ def main() -> None:
 
     with QA_PATH.open(encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
-    if not (VECTORSTORE_DIR / "faiss.index").exists():
-        raise SystemExit("No index - run `python -m src.ingest` first.")
+    from src.retrieve import available_domains
 
-    # expected_page is optional; without it only the file-level rate is reported
-    has_pages = "expected_page" in rows[0] and rows[0].get("expected_page")
+    if not available_domains():
+        raise SystemExit("No indexes - run `python -m src.ingest` first.")
 
-    file_hits = page_hits = 0
-    n_page_scored = 0
+    # expected_page is optional per row; rows with 0 (whole-file docs) are not page-scored
+    domains = sorted({r.get("domain", "course") for r in rows})
+    counts = {d: {"files": 0, "pages": 0, "n": 0, "n_page": 0} for d in domains}
+
     results = []
     for row in rows:
-        hits = search(row["question"], top_k=args.k)
+        dom = row.get("domain", "course")
+        hits = search(row["question"], domain=dom, top_k=args.k)
         file_hit = any(h["file"] == row["expected_source"] for h in hits)
-        file_hits += file_hit
         page_hit = None
-        expected_pair = None
-        if has_pages:
+        if row.get("expected_page") and int(row["expected_page"]) > 0:
             expected_page = int(row["expected_page"])
-            expected_pair = next(
-                (h for h in hits
-                 if h["file"] == row["expected_source"] and h["page"] == expected_page),
-                None,
+            page_hit = any(
+                h["file"] == row["expected_source"] and h["page"] == expected_page
+                for h in hits
             )
-            if expected_page > 0:  # files without real pages (page 0) are not scored
-                n_page_scored += 1
-                page_hit = expected_pair is not None
-                page_hits += bool(page_hit)
+            counts[dom]["n_page"] += 1
+            counts[dom]["pages"] += bool(page_hit)
+        counts[dom]["files"] += file_hit
+        counts[dom]["n"] += 1
         results.append({
             "id": row["id"],
+            "domain": dom,
             "question": row["question"],
             "expected_source": row["expected_source"],
             "expected_page": row.get("expected_page"),
-            "retrieved_files": [h["file"] for h in hits],
-            "retrieved_pages": [(h["file"], h["page"]) for h in hits[:2]],
+            "retrieved_files": [h["file"] for h in hits[:2]],
             "file_hit": file_hit,
             "page_hit": page_hit,
             "top1_score": round(hits[0]["score"], 3) if hits else 0.0,
         })
 
     n = len(results)
+    file_hits = sum(r["file_hit"] for r in results)
+    n_page_scored = sum(c["n_page"] for c in counts.values())
+    page_hits = sum(c["pages"] for c in counts.values())
     file_rate = 100.0 * file_hits / n
-    page_line = f"page hit rate : {page_hits}/{n_page_scored} = {100.0 * page_hits / n_page_scored:.0f}%" \
-        if n_page_scored else "page hit rate : not scored (missing expected_page)"
 
     print(f"\n=== Retrieval eval on {n} demo questions (k={args.k}) ===")
     for r in results:
         flag = "OK " if r["file_hit"] else "MISS"
-        print(f"[{flag}] {r['id']}: {r['question'][:60]:<60} top1={r['top1_score']}")
-    print(f"file hit rate : {file_hits}/{n} = {file_rate:.0f}%")
-    print(page_line)
+        print(f"[{flag}] {r['id']} ({r['domain'][:7]}): {r['question'][:48]:<48} top1={r['top1_score']}")
+    print(f"file hit rate overall : {file_hits}/{n} = {file_rate:.0f}%")
+    if n_page_scored:
+        print(f"page hit rate         : {page_hits}/{n_page_scored} = {100.0 * page_hits / n_page_scored:.0f}%")
+    for d, c in counts.items():
+        f_rate = 100.0 * c["files"] / c["n"] if c["n"] else 0
+        page_str = (
+            f", page {c['pages']}/{c['n_page']} ({100.0 * c['pages'] / c['n_page']:.0f}%)"
+            if c["n_page"] else ""
+        )
+        print(f"  domain '{d}': file {c['files']}/{c['n']} ({f_rate:.0f}%){page_str}")
 
     if not args.no_llm:
         from src.chat import ask_question
@@ -100,25 +108,32 @@ def main() -> None:
         "# Retrieval eval — rebuild demo set",
         "",
         f"- Run: {datetime.now(timezone.utc).isoformat(timespec='seconds')}",
-        f"- QA set: {n} hand-written questions on public course notes (this repo only)",
-        f"- top_k: {args.k} · embeddings: see vectorstore/manifest.json",
+        f"- QA set: {n} hand-written questions on public documents, this repo only",
+        f"  (course notes + PubMed abstracts / MedlinePlus pages — NOT CV project data)",
+        f"- top_k: {args.k} · embeddings: see vectorstore/*/manifest.json",
         "",
         "| metric | hits | rate |",
         "|---|---|---|",
-        f"| file hit rate | {file_hits}/{n} | {file_rate:.0f}% |",
+        f"| file hit rate (overall) | {file_hits}/{n} | {file_rate:.0f}% |",
     ]
     if n_page_scored:
-        lines.append(f"| page hit rate | {page_hits}/{n_page_scored} | {100.0 * page_hits / n_page_scored:.0f}% |")
+        lines.append(f"| page hit rate (pages exist) | {page_hits}/{n_page_scored} | {100.0 * page_hits / n_page_scored:.0f}% |")
     lines += [
         "",
-        "## Page-level misses",
+        "## Per domain",
         "",
-        *(f"- {r['id']}: {r['question']}"
-          for r in results if r.get("page_hit") is False),
+        "| domain | file hits | rate |",
+        "|---|---|---|",
+        *(f"| {d} | {c['files']}/{c['n']} | {100.0 * c['files'] / c['n']:.0f}% |" for d, c in counts.items()),
         "",
-        "Page-level metric: expected_page must be among the top-k retrieved chunks. "
-        "Questions whose answer text spans more than one adjacent page often stick "
-        "to the neighbouring page; the file-level metric above is the primary signal.",
+        "## Page-level misses (course domain)",
+        "",
+        *(f"- {r['id']}: {r['question']}" for r in results if r.get("page_hit") is False),
+        "",
+        "Page-level metric: expected_page must be among the top-k retrieved chunks "
+        "(only scored where real pages exist, i.e. PDFs). Questions whose answer "
+        "text spans more than one adjacent page often stick to the neighbouring "
+        "page; the file-level metric above is the primary signal.",
     ]
     RESULTS_MD.write_text("\n".join(lines), encoding="utf-8")
     print(f"\nresults written to {RESULTS_MD}")

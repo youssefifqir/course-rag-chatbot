@@ -13,10 +13,10 @@ from src.config import LLM_TEMPERATURE, MAX_CONTEXT_CHARS, OLLAMA_BASE_URL, OLLA
 SYSTEM_PROMPT = (
     "You are a patient teaching assistant for university students.\n"
     "Rules:\n"
-    "1. Answer ONLY from the numbered context passages.\n"
+    "1. Answer ONLY from the numbered context passages supplied with the question.\n"
     "2. Cite the passage numbers you used, like [2] or [1][3].\n"
     "3. If the passages do not contain the answer, say exactly: "
-    '"I could not find this in the indexed course material." Do not guess.\n'
+    '"I could not find this in the indexed documents for this domain." Do not guess.\n'
     "4. Be concise: 2-6 sentences, simple language, no invented definitions."
 )
 
@@ -25,6 +25,7 @@ LLM = ChatOllama(
     base_url=OLLAMA_BASE_URL,
     temperature=LLM_TEMPERATURE,
     num_predict=400,
+    keep_alive="30m",  # don't unload the model between demo questions (default 5m)
 )
 
 

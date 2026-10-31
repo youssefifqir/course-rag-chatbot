@@ -47,8 +47,11 @@ def _load_txt(path: Path) -> list[PageDocument]:
 LOADERS = {".pdf": _load_pdf, ".docx": _load_docx, ".txt": _load_txt}
 
 
-def load_directory(raw_dir: Path) -> list[PageDocument]:
-    """Load every supported file in raw_dir (one level)."""
+def load_directory(raw_dir: Path) -> tuple[list[PageDocument], list[str], list[str]]:
+    """Load every supported file in raw_dir (one level).
+
+    Each subdirectory of data/raw is a "domain" (course, medical, ...),
+    managed by the caller; this function only ingests one."""
     if not raw_dir.is_dir():
         raise FileNotFoundError(
             f"{raw_dir} does not exist. Run scripts/download_corpus.sh first "

@@ -9,7 +9,7 @@ from src.config import OLLAMA_BASE_URL
 class NotIndexable(RuntimeError):
     pass
 
-def ask_question(question: str) -> dict:
+def ask_question(question: str, domain: str = "course") -> dict:
     """Returns {'answer': str, 'sources': [compressed hits], 'retrieved': hits}."""
     from src.answer import answer_question
     from src.config import SIM_GATE
@@ -18,8 +18,8 @@ def ask_question(question: str) -> dict:
     if not question or not question.strip():
         raise ValueError("Empty question.")
 
-    hits = search(question.strip())
-    not_found = "I could not find this in the indexed course material."
+    hits = search(question.strip(), domain=domain)
+    not_found = "I could not find this in the indexed documents for this domain."
     if not hits or hits[0]["score"] < SIM_GATE:
         # Off-corpus question: refuse before involving the LLM (hallucination control)
         return {

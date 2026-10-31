@@ -1,12 +1,20 @@
-"""Course RAG chatbot - single-page Streamlit UI.
+"""Domain RAG chatbot - single-page Streamlit UI.
 
 Left: chat with citations. Right (expander): the sources behind the answer.
-Run: streamlit run app.py  (build the index first: python -m src.ingest)
+A radio in the sidebar switches domain; each domain has its own FAISS index.
+Run: streamlit run app.py  (build the indexes first: python -m src.ingest)
 """
 from __future__ import annotations
 
+import os
+
+# The embedder is already in the local HF cache after `python -m src.ingest`.
+# Running offline removes hub network checks from the serve path: fully
+# offline-friendly AND immune to slow/blocked venue WiFi stalls.
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
 import json
-import sys
 from pathlib import Path
 
 import streamlit as st
@@ -14,28 +22,60 @@ import streamlit as st
 PROJECT_ROOT = Path(__file__).resolve().parent
 VSTORE = PROJECT_ROOT / "vectorstore"
 
-st.set_page_config(page_title="Course RAG Chatbot", page_icon="🎓", layout="centered")
+DOMAIN_LABELS = {
+    "course": "🎓 Course notes",
+    "medical": "🩺 Medical literature",
+}
+DOMAIN_PROMPTS = {
+    "course": "Ask about the course notes…",
+    "medical": "Ask about the medical abstracts and patient pages…",
+}
 
-# --- index present? ---
-if not (VSTORE / "faiss.index").exists():
-    st.error(
-        "No index found in `vectorstore/`. Build it first:\n\n"
-        "`python -m src.ingest`"
+st.set_page_config(page_title="Domain RAG Chatbot", page_icon="🎓", layout="centered")
+
+
+def available_domains() -> list[str]:
+    if not VSTORE.is_dir():
+        return []
+    return sorted(
+        d.name for d in VSTORE.iterdir()
+        if d.is_dir() and (d / "faiss.index").exists()
     )
+
+
+DOMAINS = available_domains()
+if not DOMAINS:
+    st.error("No indexes found in `vectorstore/`. Build them first:\n\n`python -m src.ingest`")
     st.stop()
 
-manifest = json.loads((VSTORE / "manifest.json").read_text(encoding="utf-8"))
+if "domain" not in st.session_state or st.session_state.domain not in DOMAINS:
+    st.session_state.domain = DOMAINS[0]
 
-# --- sidebar: what's indexed / status ---
+manifest = json.loads(
+    (VSTORE / st.session_state.domain / "manifest.json").read_text(encoding="utf-8")
+)
+
+# --- sidebar: domain switch, corpus, status ---
 with st.sidebar:
-    st.title("📚 Course RAG")
-    st.caption("Retrieval-augmented answers from course notes, with citations.")
+    st.title("📚 Domain RAG")
+    st.caption("Retrieval-augmented answers with citations — one index per domain.")
+
+    st.subheader("Domain")
+    chosen = st.radio(
+        "Answering from:",
+        DOMAINS,
+        format_func=lambda d: DOMAIN_LABELS.get(d, d),
+        label_visibility="collapsed",
+    )
+    if chosen != st.session_state.domain:
+        st.session_state.domain = chosen
+        st.session_state.messages = []  # each domain keeps its own conversation
 
     st.subheader("Indexed corpus")
     for name, n in manifest["per_file"].items():
         st.markdown(f"- `{name}` — {n} chunks")
     st.caption(
-        f"{manifest['n_pages']} pages → {manifest['n_chunks']} chunks "
+        f"{manifest['n_files']} files · {manifest['n_chunks']} chunks "
         f"(size {manifest['chunk_size']}, overlap {manifest['chunk_overlap']})\n\n"
         f"Embeddings: `{manifest['embed_model']}`"
     )
@@ -53,8 +93,9 @@ with st.sidebar:
 
     st.divider()
     st.caption(
-        "Rebuild demo on public course notes — not the CV Clinical-RAG project. "
-        "Answers come only from the indexed PDFs, else the bot says so."
+        "Rebuild demo on public documents (course notes, PubMed abstracts, "
+        "MedlinePlus pages) — not the CV Clinical-RAG project. Answers come only "
+        "from the selected domain's index, else the bot says so."
     )
 
 # --- chat state ---
@@ -79,7 +120,7 @@ for msg in st.session_state.messages:
         if msg.get("sources"):
             render_sources(msg["sources"])
 
-if user_question := st.chat_input("Ask about the indexed course notes…"):
+if user_question := st.chat_input(DOMAIN_PROMPTS.get(st.session_state.domain, "Ask…")):
     st.session_state.messages.append({"role": "user", "content": user_question})
     with st.chat_message("user"):
         st.markdown(user_question)
@@ -89,7 +130,7 @@ if user_question := st.chat_input("Ask about the indexed course notes…"):
             try:
                 from src.chat import ask_question
 
-                result = ask_question(user_question)
+                result = ask_question(user_question, domain=st.session_state.domain)
             except Exception as exc:
                 result = None
                 st.error(f"Something failed: {exc}")
@@ -106,6 +147,6 @@ if user_question := st.chat_input("Ask about the indexed course notes…"):
                 st.session_state.messages.append({"role": "assistant", "content": answer})
 
 st.caption(
-    "Pipeline: PDF → chunks (900/150) · MiniLM-L6-v2 FAISS index · Ollama llama3.2:3b, "
-    "temperature 0, citation-only prompting."
+    "Pipeline: PDF/DOCX/TXT → chunks (900/150) · MiniLM-L6-v2 · FAISS per domain · "
+    "Ollama llama3.2:3b, temperature 0, citation-only prompting."
 )

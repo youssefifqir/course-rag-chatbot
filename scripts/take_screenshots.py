@@ -85,6 +85,21 @@ def main() -> None:
         page.screenshot(path=DOCS / "screenshot_multiturn.png", full_page=True)
         print("[shot] screenshot_multiturn.png")
 
+        # Q4: switch to the MEDICAL domain and ask a clinical question
+        page.get_by_text("Medical literature").click()
+        deadline = time.time() + 30
+        while time.time() < deadline and "pubmed_" not in page.inner_text("body"):
+            time.sleep(1)
+        send_question(page, "Do SGLT2 inhibitors help in heart failure with preserved ejection fraction?")
+        wait_for_answers(page, 2)
+        time.sleep(1.5)
+        details = page.query_selector_all("details")
+        if details:
+            details[0].click()
+            time.sleep(1)
+        page.screenshot(path=DOCS / "screenshot_medical.png", full_page=True)
+        print("[shot] screenshot_medical.png")
+
         context.close()  # flushes the recorded webm
         browser.close()
 

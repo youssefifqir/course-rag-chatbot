@@ -3,10 +3,10 @@
 # All documents are freely available public course notes/books (see README credits).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-mkdir -p data/raw
+mkdir -p data/raw/course
 
 fetch () {
-  local url="$1" out="data/raw/$2" min_bytes="$3"
+  local url="$1" out="data/raw/course/$2" min_bytes="$3"
   if [ -f "$out" ] && [ "$(wc -c < "$out")" -ge "$min_bytes" ]; then
     echo "[ok] $2 already present"
     return

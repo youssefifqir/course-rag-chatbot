@@ -1,0 +1,21 @@
+id,question,expected_source,expected_page
+q01,"What is the difference between supervised and unsupervised learning?",ciml_machine_learning.pdf,35
+q02,"How does k-nearest neighbors classify a new point?",ciml_machine_learning.pdf,32
+q03,"What does it mean for a model to generalize to unseen data?",ciml_machine_learning.pdf,9
+q04,"What is cross-validation used for?",ciml_machine_learning.pdf,66
+q05,"Explain what a decision tree is.",ciml_machine_learning.pdf,11
+q06,"What is the difference between classification and regression?",ciml_machine_learning.pdf,10
+q07,"Why is testing a model on the data it trained on a bad idea?",ciml_machine_learning.pdf,25
+q08,"What is a loss function and what are some examples?",ciml_machine_learning.pdf,14
+q09,"What does a perceptron do?",ciml_machine_learning.pdf,43
+q10,"How do I define a function in Python?",think_python.pdf,42
+q11,"What are keyword arguments in Python function calls?",think_python.pdf,55
+q12,"How do lists and tuples differ in Python?",think_python.pdf,137
+q13,"How does a for loop work in Python?",think_python.pdf,85
+q14,"What is list comprehension in Python?",think_python.pdf,206
+q15,"How does slicing sequences work in Python?",think_python.pdf,114
+q16,"What is an attention mechanism in a transformer?",slp3_ch7_transformers.pdf,8
+q17,"Why does a transformer use positional encodings?",slp3_ch7_transformers.pdf,17
+q18,"Do BERT-style models train with a causal or a masked language modeling objective?",slp3_ch9_masked_lm.pdf,3
+q19,"What is retrieval-augmented generation and why is it useful?",slp3_ch11_ir_rag.pdf,2
+q20,"What is the difference between sparse and dense retrieval?",slp3_ch11_ir_rag.pdf,4

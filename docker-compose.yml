@@ -1,0 +1,21 @@
+services:
+  app:
+    build: .
+    volumes:
+      - ./data:/app/data
+      - ./vectorstore:/app/vectorstore
+      - hf-cache:/root/.cache/huggingface   # keeps embedder across restarts
+    ports:
+      - "8501:8501"
+    environment:
+      # reach the Ollama EMBEDDED ON THE HOST, not inside the container:
+      # "host.docker.internal" resolves to the host machine from Docker Desktop
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      HF_HUB_OFFLINE: "1"          # after first model download, fully offline
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # NB: the LLM itself stays on the host (ollama serve); this compose only
+    # containerizes the app tier. Pull the model privately: ollama pull llama3.2:3b
+
+volumes:
+  hf-cache:

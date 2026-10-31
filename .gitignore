@@ -1,0 +1,17 @@
+# local virtualenv / packages
+.venv/
+venv/
+
+# build artifacts (rebuild with python -m src.ingest)
+vectorstore/
+data/raw/
+
+# python runtime
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# junk
+.DS_Store
+logs/
+*.log

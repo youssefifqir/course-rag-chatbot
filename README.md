@@ -29,7 +29,8 @@ so the whole demo works **fully offline** once assets are cached.
 | Embed | `sentence-transformers` | `all-MiniLM-L6-v2`, L2-normalised |
 | Index | FAISS | `IndexFlatIP` (exact search = cosine similarity) |
 | Retrieve | `src/retrieve.py` | top-k=6, similarity metadata kept |
-| Gate | `src/chat.py` | similarity < 0.30 → honest "not found", no LLM call |
+| Condense | `src/answer.py` | follow-ups ("could you detail it more") get rewritten into a standalone query using the last turns, few-shot prompt, temp 0 — what `create_history_aware_retriever` does for vanilla LangChain retrievers |
+| Gate | `src/chat.py` | similarity < 0.30 → honest "not found", no answer-LLM call |
 | Answer | `src/answer.py` | Ollama `llama3.2:3b`, temperature 0, context-only prompt with `[n]` citations |
 | UI | `app.py` | Streamlit: domain switch, chat, sources table (file, page, similarity) |
 
@@ -124,6 +125,11 @@ short screen recording are committed fallbacks.
 - **One engine, per-domain indexes**: `data/raw/<domain>/` folders each build a
   separate FAISS index, so course questions never cross-search PubMed abstracts
   and vice versa. Adding a domain = drop a folder, run ingest, no code changes.
+- **History-aware retrieval**: the recording demo showed a real bug — "could
+  you detail it more" embedded to noise and hit random pages. Now the last turns
+  + the new question are rewritten (LLM, temp 0, few-shot) into one standalone
+  query *before* retrieval; the rewritten query is shown in the sources panel.
+  Muscle memory for the LangChain concept: this is `create_history_aware_retriever`.
 - **Hallucination control**: prompt instructs to answer *only* from numbered
   context passages and to refuse otherwise; temperature 0; a measured similarity
   gate cuts off-corpus questions before the LLM is ever called. Small local
@@ -180,6 +186,10 @@ Dockerfile, docker-compose.yml
   the neighbouring page; the sources panel is visible exactly for that.
 - *"What if I ask something not in the notes?"* — it says it couldn't find it,
   and shows the (low) similarity scores for transparency.
+- *"What happens with vague follow-ups like 'detail it more'?"* — the last turns
+  + follow-up are rewritten into a standalone search query before retrieval
+  (shown live in the sources panel: "searched as: …"), and the answer prompt
+  also sees the recent conversation.
 - *"Medical advice?"* — no: answers cite abstracts/patient pages, are labeled as
   a demo, and the gate refuses anything outside the indexed documents.
 - *"Why two screenshots of refusals in docs/?"* — they demonstrate the honest

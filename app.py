@@ -103,24 +103,39 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 
-def render_sources(sources: list[dict]) -> None:
-    """Render the sources that fed the last answer."""
-    rows = []
-    for s in sources:
-        page = "whole file" if s["page"] == 0 else f"p.{s['page']}"
-        rows.append(f"| [{s['cite']}] | `{s['file']}` | {page} | {s['score']} |")
-    st.expander("🔎 Sources used").markdown(
-        "| cite | file | page | similarity |\n|---|---|---|---|\n" + "\n".join(rows)
-    )
+def render_sources(sources: list[dict], rewritten: str | None = None) -> None:
+    """Render the sources that fed the last answer (+ the search rewrite)."""
+    body = ""
+    if rewritten:
+        body += f"\n> 🔁 searched as: **{rewritten}**\n"
+    if sources:
+        rows = []
+        for s in sources:
+            page = "whole file" if s["page"] == 0 else f"p.{s['page']}"
+            rows.append(f"| [{s['cite']}] | `{s['file']}` | {page} | {s['score']} |")
+        from src.config import SIM_GATE
+
+        body += (
+            "\n| cite | file | page | similarity |\n|---|---|---|---|\n" + "\n".join(rows)
+            + f"\n\n*similarity floor {SIM_GATE} — anything below it is refused "
+            "without an LLM call.*"
+        )
+    elif rewritten:
+        body += "\n\nTop result landed below the similarity floor, so nothing shown."
+    label = "🔎 Sources used"
+    if rewritten:
+        label = "🔎 Sources used · (query rewritten for retrieval)"
+    st.expander(label).markdown(body if body else "—")
 
 
 for msg in st.session_state.messages:
     with st.chat_message("user" if msg["role"] == "user" else "assistant"):
         st.markdown(msg["content"])
-        if msg.get("sources"):
-            render_sources(msg["sources"])
+        if msg.get("sources") or msg.get("rewritten"):
+            render_sources(msg.get("sources"), msg.get("rewritten"))
 
 if user_question := st.chat_input(DOMAIN_PROMPTS.get(st.session_state.domain, "Ask…")):
+    history = st.session_state.messages  # everything from BEFORE this question
     st.session_state.messages.append({"role": "user", "content": user_question})
     with st.chat_message("user"):
         st.markdown(user_question)
@@ -130,7 +145,9 @@ if user_question := st.chat_input(DOMAIN_PROMPTS.get(st.session_state.domain, "A
             try:
                 from src.chat import ask_question
 
-                result = ask_question(user_question, domain=st.session_state.domain)
+                result = ask_question(
+                    user_question, domain=st.session_state.domain, history=history
+                )
             except Exception as exc:
                 result = None
                 st.error(f"Something failed: {exc}")
@@ -138,13 +155,15 @@ if user_question := st.chat_input(DOMAIN_PROMPTS.get(st.session_state.domain, "A
         if result:
             answer = result["answer"]
             st.markdown(answer)
+            shown = {
+                "role": "assistant",
+                "content": answer,
+                "rewritten": result.get("rewritten"),
+            }
             if result["sources"]:
-                render_sources(result["sources"])
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": answer, "sources": result["sources"]}
-                )
-            else:
-                st.session_state.messages.append({"role": "assistant", "content": answer})
+                render_sources(result["sources"], result.get("rewritten"))
+                shown["sources"] = result["sources"]
+            st.session_state.messages.append(shown)
 
 st.caption(
     "Pipeline: PDF/DOCX/TXT → chunks (900/150) · MiniLM-L6-v2 · FAISS per domain · "

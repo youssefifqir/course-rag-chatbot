@@ -71,19 +71,28 @@ def main() -> None:
         page.screenshot(path=DOCS / "screenshot_demo.png", full_page=True)
         print("[shot] screenshot_demo.png")
 
-        # Q2: off-corpus -> refusal
-        send_question(page, "Who won the 2022 FIFA World Cup?")
+        # Q2: THE FIXdemo — vague follow-up gets rewritten (expander shows it)
+        send_question(page, "could you detail it more")
         wait_for_answers(page, 4)
-        time.sleep(2)
-        page.screenshot(path=DOCS / "screenshot_refusal.png", full_page=True)
-        print("[shot] screenshot_refusal.png")
+        time.sleep(1.5)
+        # open the LAST sources expander (holds the rewritten query)
+        details = page.query_selector_all("details")
+        if details:
+            details[-1].click()
+            time.sleep(1)
+        page.screenshot(path=DOCS / "screenshot_demo.png", full_page=True)
+        print("[shot] screenshot_demo.png")
 
-        # Q3: second good question -> multi-turn end state
-        send_question(page, "What does a perceptron do?")
+        # Q3: off-corpus -> refusal (rewrite shown, floor explains it)
+        send_question(page, "Who won the 2022 FIFA World Cup?")
         wait_for_answers(page, 6)
         time.sleep(1.5)
-        page.screenshot(path=DOCS / "screenshot_multiturn.png", full_page=True)
-        print("[shot] screenshot_multiturn.png")
+        details = page.query_selector_all("details")
+        if details:
+            details[-1].click()
+            time.sleep(0.8)
+        page.screenshot(path=DOCS / "screenshot_refusal.png", full_page=True)
+        print("[shot] screenshot_refusal.png")
 
         # Q4: switch to the MEDICAL domain and ask a clinical question
         page.get_by_text("Medical literature").click()
@@ -95,7 +104,7 @@ def main() -> None:
         time.sleep(1.5)
         details = page.query_selector_all("details")
         if details:
-            details[0].click()
+            details[-1].click()
             time.sleep(1)
         page.screenshot(path=DOCS / "screenshot_medical.png", full_page=True)
         print("[shot] screenshot_medical.png")

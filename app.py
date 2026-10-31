@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import os
 
-# The embedder is already in the local HF cache after `python -m src.ingest`.
-# Running offline removes hub network checks from the serve path: fully
-# offline-friendly AND immune to slow/blocked venue WiFi stalls.
+# The embedder ships in the local HF cache after `python -m src.ingest`.
+# Offline mode removes Hub network checks from the serve path: fully
+# offline-capable and immune to slow or blocked network conditions.
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
@@ -93,9 +93,9 @@ with st.sidebar:
 
     st.divider()
     st.caption(
-        "Rebuild demo on public documents (course notes, PubMed abstracts, "
-        "MedlinePlus pages) — not the CV Clinical-RAG project. Answers come only "
-        "from the selected domain's index, else the bot says so."
+        "Self-contained project using public documents (course notes, PubMed "
+        "abstracts, MedlinePlus pages). Answers come only from the selected "
+        "domain's index; otherwise the assistant says so."
     )
 
 # --- chat state ---

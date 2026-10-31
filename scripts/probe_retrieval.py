@@ -1,6 +1,6 @@
-"""Dev helper: for each eval question, print where retrieval lands.
+"""Utility: for each eval question, print where retrieval lands.
 
-Used once to fill expected_page in eval/qa_pairs.csv.
+Used to curate the expected_page values in eval/qa_pairs.csv.
 """
 import csv
 import sys

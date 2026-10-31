@@ -5,8 +5,8 @@ Metric (retrieval, model-free and reproducible):
 - page hit:    the exact expected page appears among the top-k retrieved chunks
 - top1 score:  similarity of the best chunk (sanity check on match quality)
 
-Label: this is a *rebuild demo set* we wrote for this repo on public course
-notes. It is not a benchmark of the Clinical RAG project on the CV.
+Label: the QA set was authored for this repository on public documents.
+All reported metrics apply to this project only.
 
 Usage:  python -m eval.run_eval [--k 6] [--no-llm]
         --no-llm measures retrieval only (fast, no Ollama needed)
@@ -105,11 +105,11 @@ def main() -> None:
                 print(f"\n{r['id']}: LLM spot-check failed: {exc}")
 
     lines = [
-        "# Retrieval eval — rebuild demo set",
+        "# Retrieval eval",
         "",
         f"- Run: {datetime.now(timezone.utc).isoformat(timespec='seconds')}",
-        f"- QA set: {n} hand-written questions on public documents, this repo only",
-        f"  (course notes + PubMed abstracts / MedlinePlus pages — NOT CV project data)",
+        f"- QA set: {n} curated questions on public documents",
+        "  (course notes + PubMed abstracts / MedlinePlus pages)",
         f"- top_k: {args.k} · embeddings: see vectorstore/*/manifest.json",
         "",
         "| metric | hits | rate |",

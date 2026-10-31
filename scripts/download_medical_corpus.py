@@ -2,8 +2,8 @@
 
 Sources (all public domain / freely readable):
 - PubMed abstracts via NCBI E-utilities (esearch + efetch, XML), a handful of
-  recent-ish abstracts per topic (~20 total). We only store title/authors/
-  abstract text with the PMID - like a saved reading list.
+  abstracts per topic (~20 total). Only title/authors/abstract text are stored,
+  with the PMID for attribution.
 - NIH MedlinePlus condition overview pages (plain-language patient info).
 
 Run:  python scripts/download_medical_corpus.py

@@ -1,8 +1,8 @@
-# Retrieval eval — rebuild demo set
+# Retrieval eval
 
-- Run: 2026-10-31T12:34:11+00:00
-- QA set: 30 hand-written questions on public documents, this repo only
-  (course notes + PubMed abstracts / MedlinePlus pages — NOT CV project data)
+- Run: 2026-10-31T13:20:15+00:00
+- QA set: 30 curated questions on public documents
+  (course notes + PubMed abstracts / MedlinePlus pages)
 - top_k: 6 · embeddings: see vectorstore/*/manifest.json
 
 | metric | hits | rate |

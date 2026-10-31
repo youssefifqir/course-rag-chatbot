@@ -27,7 +27,7 @@ LLM = ChatOllama(
     base_url=OLLAMA_BASE_URL,
     temperature=LLM_TEMPERATURE,
     num_predict=400,
-    keep_alive="30m",  # don't unload the model between demo questions (default 5m)
+    keep_alive="30m",  # keep the model resident between conversations (default 5 min unloads)
 )
 
 
@@ -52,8 +52,8 @@ def condense_question(question: str, history: list[dict] | None) -> str:
     Follow-ups like "could you detail it more" carry no topic words, so the
     raw sentence embeds to noise. We take the last turns + the new question
     and let the LLM (temp 0) rewrite them into one standalone question; the
-    rewritten query is what gets embedded and searched. Few-shot example kept
-    in the prompt because llama3.2:3b is mediocre at zero-shot rewriting.
+    rewritten query is what gets embedded and searched. A few-shot example is
+    included because this small model performs poorly at zero-shot rewriting.
     """
     if not history:
         return question

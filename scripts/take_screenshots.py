@@ -1,9 +1,11 @@
-"""Automated screenshots + short demo recording for docs/ (dev helper).
+"""Automated screenshots + demo recording for docs/.
 
 Drives the real Streamlit UI with a headless browser (chat textarea path):
-  1. Q1: RAG definition -> screenshot with the sources expander open
-  2. Q2: off-corpus question -> refusal screenshot
-  3. webm recording of the whole session -> docs/demo_recording.webm
+  1. RAG definition + sources expander -> docs/screenshot_demo.png (baseline)
+  2. Vague follow-up, rewritten query visible -> docs/screenshot_demo.png
+  3. Off-corpus question -> docs/screenshot_refusal.png
+  4. Medical domain switch + clinical question -> docs/screenshot_medical.png
+  5. webm recording of the session -> docs/demo_recording.webm
 
 The app must be running: streamlit run app.py
 """
@@ -71,7 +73,7 @@ def main() -> None:
         page.screenshot(path=DOCS / "screenshot_demo.png", full_page=True)
         print("[shot] screenshot_demo.png")
 
-        # Q2: THE FIXdemo — vague follow-up gets rewritten (expander shows it)
+        # Q2: history-aware retrieval in action — the expander shows the rewrite
         send_question(page, "could you detail it more")
         wait_for_answers(page, 4)
         time.sleep(1.5)
